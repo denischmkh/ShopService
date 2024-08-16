@@ -1,5 +1,18 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter, Request
+from fastapi.responses import JSONResponse
+from fastapi import status
+from fastapi.exceptions import HTTPException
+from src.routers.auth.router import router as users_routers
 
-routes = []
 
-app = FastAPI(debug=True, routes=routes, title="API Service for shop")
+routers = [users_routers]
+
+app = FastAPI(debug=True, title="API Service for shop")
+
+for router in routers:
+    app.include_router(router)
+
+
+
+
+
