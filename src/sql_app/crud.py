@@ -26,21 +26,23 @@ async def get_session() -> AsyncSession:
 
 
 class CRUDSettings(ABC):
-    """ Every child class must contain his SQLAlchemy model to interact with her, using context manager """
+    """ Every child class must contain his SQLAlchemy model to interact with her """
     __db_model = Type[Base]
 
     @classmethod
     @abstractmethod
     async def create(cls, database_data_model: Type[BaseModel]) -> Any:
-        """ Create new record used pydantic model """
+        """ Create new record by using pydantic model """
         ...
 
     @classmethod
     @abstractmethod
     async def read(cls) -> Any:
+        """ Create read data """
         ...
 
     @classmethod
     @abstractmethod
     async def delete(cls) -> Any:
+        """ Delete record """
         ...
