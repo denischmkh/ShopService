@@ -14,7 +14,7 @@ async def session_generator() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-# Function to get session
+# Context manager to get session
 @asynccontextmanager
 async def get_session() -> AsyncSession:
     async for session in session_generator():
