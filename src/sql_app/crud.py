@@ -6,7 +6,7 @@ from .models import Base, User, Product, Category, Basket
 from pydantic import BaseModel
 import sqlalchemy as _sql
 from fastapi.exceptions import HTTPException
-from src.routers.schemas import (UserReadSchema,
+from routers.schemas import (UserReadSchema,
                                  UserCreateSchema,
                                  UserDatabaseSchema,
                                  CategoryReadSchema,
@@ -15,7 +15,7 @@ from src.routers.schemas import (UserReadSchema,
                                  ProductReadSchema,
                                  BasketCreateSchema,
                                  BasketReadSchema, UserAuthScheme, )
-from src.dependencies import get_session, get_password_hash, verify_password
+from dependencies import get_session, get_password_hash, verify_password
 
 ############################################################################
 #              Abstract class to give an example for child class           #

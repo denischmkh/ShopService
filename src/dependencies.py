@@ -9,11 +9,11 @@ from jwt.exceptions import ExpiredSignatureError
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.sql_app.db_connect import AsyncSessionLocal
+from sql_app.db_connect import AsyncSessionLocal
 
 from passlib.context import CryptContext
 
-from .config import JWT_SECRET_TOKEN
+from config import JWT_SECRET_TOKEN
 
 
 ####################################################

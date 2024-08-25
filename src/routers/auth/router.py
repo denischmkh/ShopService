@@ -1,12 +1,12 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Query, Request, HTTPException, Cookie
+from fastapi import APIRouter, Body, Query, Request, HTTPException
 from fastapi.responses import JSONResponse
-from src.sql_app.crud import UserCRUD
+from sql_app.crud import UserCRUD
 from typing import Annotated
 from ..schemas import UserReadSchema, UserDatabaseSchema, UserCreateSchema, UserAuthScheme
-from ...dependencies import create_access_token, JWT_data, decode_token
-from ...sql_app.models import User
+from dependencies import create_access_token, JWT_data, decode_token
+from sql_app.models import User
 
 router = APIRouter(prefix='/auth', tags=['Authorization routers'])
 
