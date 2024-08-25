@@ -17,9 +17,10 @@ async def create_user(user_scheme: Annotated[UserCreateSchema, Body()]) -> UserD
     return result
 
 
-@router.get('/found_user_by_id', response_model=UserReadSchema, description='Get one user by id')
-async def get_user_by_id(user_id: Annotated[UUID, Query()]):
-    result = await UserCRUD.read(user_id)
+@router.get('/found_user', response_model=UserReadSchema, description='Get one user by id or username')
+async def get_user_by_id(user_id: Annotated[UUID, Query()] = None,
+                         username: Annotated[str, Query()] = None):
+    result = await UserCRUD.read(user_id=user_id, username=username)
     if not result:
         raise HTTPException(status_code=404, detail='User not found')
     return result
@@ -50,8 +51,12 @@ async def authorization_user(user_data: UserAuthScheme):
     return response
 
 
-@router.post('/get_current_user', response_model=UserReadSchema, description='Get current user by access token')
-async def get_current_user(access_token: str = Cookie(...)):
-    user_data = decode_token(access_token)
-    user = await UserCRUD.read(user_data.get('id'))
+@router.get('/get_current_user', response_model=UserReadSchema, description='Get current user by access token')
+async def get_current_user(request: Request):
+    user_data = decode_token(request.cookies.get('access_token'))
+    if not user_data:
+        raise HTTPException(status_code=404, detail='User not found')
+    user = await UserCRUD.read(user_id=UUID(user_data.get('id')), username=user_data.get('username'))
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
     return user

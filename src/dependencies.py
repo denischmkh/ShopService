@@ -5,6 +5,7 @@ from datetime import timedelta, datetime, timezone
 from typing import AsyncGenerator
 
 import jwt
+from jwt.exceptions import ExpiredSignatureError
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -64,5 +65,8 @@ def create_access_token(data: JWT_data, expires_delta: timedelta | None = None):
     return encoded_jwt
 
 def decode_token(access_token: str) -> dict:
-    decode_token = jwt.decode(access_token, JWT_SECRET_TOKEN, algorithms=[ALGORITHM])
-    return decode_token
+    try:
+        decode_token = jwt.decode(access_token, JWT_SECRET_TOKEN, algorithms=[ALGORITHM])
+        return decode_token
+    except ExpiredSignatureError:
+        return None

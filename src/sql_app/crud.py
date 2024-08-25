@@ -66,9 +66,14 @@ class UserCRUD(BaseCRUD):
             return user_database_schema
 
     @classmethod
-    async def read(cls, user_id: UUID) -> UserReadSchema | None:
+    async def read(cls, user_id: UUID | None, username: str | None) -> UserReadSchema | None:
         async with get_session() as session:
-            stmt = _sql.select(cls.__db_model).where(cls.__db_model.id == user_id)
+            if user_id:
+                stmt = _sql.select(cls.__db_model).where(cls.__db_model.id == user_id)
+            elif username:
+                stmt = _sql.select(cls.__db_model).where(cls.__db_model.username == username)
+            else:
+                return None
             result = await session.execute(stmt)
             user = result.scalars().first()
             if user is None:
