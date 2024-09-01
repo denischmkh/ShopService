@@ -10,6 +10,7 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, unique=True, nullable=False)
     username = Column(String(length=30), nullable=False, unique=True)
     hashed_password = Column(String, nullable=False)
+    admin = Column(Boolean, nullable=True)
     active = Column(Boolean)
     created_at = Column(DateTime)
 

@@ -4,8 +4,8 @@ from fastapi import APIRouter, Body, Query, Request, HTTPException
 from fastapi.responses import JSONResponse
 from sql_app.crud import UserCRUD
 from typing import Annotated
-from ..schemas import UserReadSchema, UserDatabaseSchema, UserCreateSchema, UserAuthScheme
-from dependencies import create_access_token, JWT_data, decode_token
+from routers.schemas import UserReadSchema, UserDatabaseSchema, UserCreateSchema, UserAuthScheme
+from dependencies import create_access_token, JWT_data, Token_Scheme, decode_token
 from sql_app.models import User
 
 router = APIRouter(prefix='/auth', tags=['Authorization routers'])
@@ -44,10 +44,10 @@ async def authorization_user(user_data: UserAuthScheme):
     user: User | None = await UserCRUD.verify_user(user_data)
     if not user:
         raise HTTPException(status_code=404, detail='User not found')
-    data_to_encode = JWT_data(**{'username': user.username, 'id': str(user.id)})
-    jwt_token = create_access_token(data=data_to_encode)
-    response = JSONResponse(content={'access_token': jwt_token}, status_code=200)
-    response.set_cookie(key='access_token', value=jwt_token)
+    data_to_encode = JWT_data(username=user.username, id=str(user.id))
+    jwt_token: Token_Scheme = create_access_token(data=data_to_encode)
+    response = JSONResponse(content=jwt_token.dict(), status_code=200)
+    response.set_cookie(key='access_token', value=jwt_token.access_token)
     return response
 
 
@@ -55,7 +55,7 @@ async def authorization_user(user_data: UserAuthScheme):
 async def get_current_user(request: Request):
     user_data = decode_token(request.cookies.get('access_token'))
     if not user_data:
-        raise HTTPException(status_code=404, detail='User not found')
+        raise HTTPException(status_code=404, detail='Invalid Token')
     user = await UserCRUD.read(user_id=UUID(user_data.get('id')), username=user_data.get('username'))
     if not user:
         raise HTTPException(status_code=404, detail='User not found')

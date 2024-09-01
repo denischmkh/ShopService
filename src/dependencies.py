@@ -15,13 +15,12 @@ from passlib.context import CryptContext
 
 from config import JWT_SECRET_TOKEN
 
-
 ####################################################
 #              Depends functions                   #
 ####################################################
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 1
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -49,9 +48,16 @@ def get_password_hash(password: str) -> str:
 def verify_password(password: str, hashed_password: str) -> bool:
     return pwd_context.verify(password, hashed_password)
 
+
 class JWT_data(BaseModel):
     id: str
     username: str
+
+
+class Token_Scheme(BaseModel):
+    access_token: str
+    token_type: str
+
 
 def create_access_token(data: JWT_data, expires_delta: timedelta | None = None):
     data = data.dict()
@@ -62,9 +68,11 @@ def create_access_token(data: JWT_data, expires_delta: timedelta | None = None):
         expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET_TOKEN, algorithm=ALGORITHM)
-    return encoded_jwt
+    token_scheme = Token_Scheme(access_token=encoded_jwt, token_type='Bearer')
+    return token_scheme
 
-def decode_token(access_token: str) -> dict:
+
+def decode_token(access_token: str) -> dict | None:
     try:
         decode_token = jwt.decode(access_token, JWT_SECRET_TOKEN, algorithms=[ALGORITHM])
         return decode_token

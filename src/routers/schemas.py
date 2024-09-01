@@ -37,8 +37,10 @@ class UserCreateSchema(BaseModel):
             raise HTTPException(status_code=422, detail='Password must contain at least one capital letter')
         return password
 
+
 class UserAuthScheme(UserCreateSchema):
     pass
+
 
 class UserDatabaseSchema(BaseModel):
     id: uuid.UUID = Field(default_factory=uuid.uuid4)
