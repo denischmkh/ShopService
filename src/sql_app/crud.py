@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from typing import Type, Any
 from uuid import UUID
 
+from fastapi.security import OAuth2PasswordRequestForm
+
 from .models import Base, User, Product, Category, Basket
 from pydantic import BaseModel
 import sqlalchemy as _sql
@@ -68,10 +70,8 @@ class UserCRUD(BaseCRUD):
     @classmethod
     async def read(cls, user_id: UUID | None, username: str | None) -> UserReadSchema | None:
         async with get_session() as session:
-            if user_id:
-                stmt = _sql.select(cls.__db_model).where(cls.__db_model.id == user_id)
-            elif username:
-                stmt = _sql.select(cls.__db_model).where(cls.__db_model.username == username)
+            if user_id or username:
+                stmt = _sql.select(cls.__db_model).where(_sql.or_(cls.__db_model.username == username, cls.__db_model.id == user_id))
             else:
                 return None
             result = await session.execute(stmt)
@@ -101,7 +101,7 @@ class UserCRUD(BaseCRUD):
             return users
 
     @classmethod
-    async def verify_user(cls, user_data: UserAuthScheme) -> UserReadSchema | None:
+    async def verify_user(cls, user_data: OAuth2PasswordRequestForm) -> UserReadSchema | None:
         async with get_session() as session:
             stmt = _sql.select(cls.__db_model).where(cls.__db_model.username == user_data.username)
             result = await session.execute(stmt)

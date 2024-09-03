@@ -11,6 +11,7 @@ class UserReadSchema(BaseModel):
     id: uuid.UUID
     username: str
     active: bool
+    admin: bool
     created_at: datetime.datetime
 
     class Config:
@@ -20,6 +21,7 @@ class UserReadSchema(BaseModel):
 class UserCreateSchema(BaseModel):
     username: str = Field(min_length=3, max_length=30)
     password: str = Field(min_length=8)
+    admin: bool = False
 
     @field_validator('username', mode='before')
     @classmethod
@@ -47,6 +49,7 @@ class UserDatabaseSchema(BaseModel):
     username: str
     hashed_password: str
     active: bool = Field(default=True)
+    admin: bool
     created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
 
 

@@ -3,7 +3,7 @@ from routers.auth.router import router as users_routers
 from routers.store.category_router import router as categories_router
 from routers.store.product_router import router as products_router
 
-app = FastAPI(debug=False, title="API Service for shop", prefix='/api')
+app = FastAPI(debug=False, title="API Service for shop", openapi_prefix='/api')
 
 store_routers = APIRouter(prefix='/store')
 store_routers.include_router(categories_router)

@@ -21,6 +21,7 @@ class Category(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, unique=True, nullable=False)
     title = Column(String(length=30), nullable=False)
     created_at = Column(DateTime)
+    active_to = Column(DateTime)
 
 
 class Product(Base):
