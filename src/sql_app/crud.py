@@ -2,24 +2,23 @@ from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from typing import Type, Any, AsyncGenerator
 from uuid import UUID
-
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from starlette import status
 from .db_connect import AsyncSessionLocal
 from .models import Base, User, Product, Category, Basket
 from pydantic import BaseModel
 import sqlalchemy as _sql
 from fastapi.exceptions import HTTPException
 from routers.schemas import (UserReadSchema,
-                                 UserCreateSchema,
-                                 UserDatabaseSchema,
-                                 CategoryReadSchema,
-                                 CategoryCreateSchema,
-                                 ProductCreateSchema,
-                                 ProductReadSchema,
-                                 BasketCreateSchema,
-                                 BasketReadSchema, UserAuthScheme, )
+                             UserCreateSchema,
+                             UserDatabaseSchema,
+                             CategoryReadSchema,
+                             CategoryCreateSchema,
+                             ProductCreateSchema,
+                             ProductReadSchema,
+                             BasketCreateSchema,
+                             BasketReadSchema, UserAuthScheme, )
 from .dependencies import verify_password, get_password_hash
 
 
@@ -37,9 +36,6 @@ async def get_session() -> AsyncSession:
                 yield session
         finally:
             await session.close()
-
-
-
 
 
 ############################################################################
@@ -80,7 +76,7 @@ class UserCRUD(BaseCRUD):
             result = await session.execute(stmt)
             existing_user = result.scalars().first()
             if existing_user:
-                raise HTTPException(status_code=422, detail='Username already exists')
+                raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail='Username already exists')
             hashed_password = get_password_hash(user_create_schema.password)
             user_database_schema = UserDatabaseSchema(**user_create_schema.dict(), hashed_password=hashed_password)
             new_user = cls.__db_model(
@@ -94,11 +90,12 @@ class UserCRUD(BaseCRUD):
     async def read(cls, user_id: UUID | None, username: str | None) -> UserReadSchema | None:
         async with get_session() as session:
             if user_id or username:
-                stmt = _sql.select(cls.__db_model).where(_sql.or_(cls.__db_model.username == username, cls.__db_model.id == user_id))
+                stmt = _sql.select(cls.__db_model).where(
+                    _sql.or_(cls.__db_model.username == username, cls.__db_model.id == user_id))
             else:
                 return None
             result = await session.execute(stmt)
-            user = result.scalars().first()
+            user: User = result.scalars().first()
             if user is None:
                 return user
             return user
@@ -108,7 +105,7 @@ class UserCRUD(BaseCRUD):
         async with get_session() as session:
             stmt = _sql.select(cls.__db_model).where(cls.__db_model.id == user_id)
             result = await session.execute(stmt)
-            user = result.scalars().first()
+            user: User = result.scalars().first()
             if user is None:
                 return user
             delete_stmt = _sql.delete(cls.__db_model).where(cls.__db_model.id == user_id)
@@ -133,5 +130,5 @@ class UserCRUD(BaseCRUD):
                 return None
             verify: bool = verify_password(password=user_data.password, hashed_password=user.hashed_password)
             if not verify:
-                raise HTTPException(status_code=401, detail='Incorrect password')
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Incorrect password')
             return user

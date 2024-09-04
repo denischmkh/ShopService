@@ -1,5 +1,6 @@
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import Column, UUID, Integer, String, Boolean, DateTime, DECIMAL
+from routers.schemas import UserReadSchema
 
 Base = declarative_base()
 
@@ -13,6 +14,16 @@ class User(Base):
     admin = Column(Boolean, nullable=True)
     active = Column(Boolean)
     created_at = Column(DateTime)
+
+    def to_dict(self):
+        return {
+            'id': str(self.id),  # Convert UUID to string
+            'username': self.username,
+            'hashed_password': self.hashed_password,
+            'admin': self.admin,
+            'active': self.active,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
 
 
 class Category(Base):
@@ -35,7 +46,6 @@ class Product(Base):
     discount = Column(Integer, nullable=True)  # Discount for price
     created_at = Column(DateTime)
     categories_id = Column(UUID(as_uuid=True), nullable=True)
-
 
 
 class Basket(Base):

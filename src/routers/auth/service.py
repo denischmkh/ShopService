@@ -1,12 +1,14 @@
+import asyncio
 from datetime import timedelta, datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
 import jwt
-from fastapi import HTTPException, Depends, Form, Query
+from fastapi import HTTPException, Depends, Form, Query, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jwt.exceptions import ExpiredSignatureError
 from pydantic import BaseModel
+
 import config
 from routers.schemas import UserCreateSchema, UserReadSchema, UserDatabaseSchema
 
@@ -23,11 +25,7 @@ from sql_app.models import User
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1
 
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
-
-
-
 
 
 class JWT_data(BaseModel):
@@ -82,9 +80,9 @@ async def create_new_user(user_create_scheme: UserCreateSchema) -> UserDatabaseS
     return result
 
 
-async def get_user_by_id(user_id: Annotated[UUID, Query()] = None,
-                         username: Annotated[str, Query()] = None,
-                         ):
+async def get_user_by_id_or_username(user_id: Annotated[UUID, Query()] = None,
+                                     username: Annotated[str, Query()] = None,
+                                     ):
     result = await UserCRUD.read(user_id=user_id, username=username)
     if not result:
         raise HTTPException(status_code=404, detail='User not found')
@@ -103,8 +101,9 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         raise HTTPException(status_code=404, detail='User not found')
     return user_from_db
 
+
 async def deleted_user(user_id: Annotated[UUID, Query()],
-                            current_user: Annotated[UserReadSchema, Depends(get_current_user)]) -> UserReadSchema:
+                       current_user: Annotated[UserReadSchema, Depends(get_current_user)]) -> UserReadSchema:
     if not current_user.admin:
         raise HTTPException(status_code=401, detail='You are not admin')
     deleted_user: UserReadSchema = await UserCRUD.delete(user_id)
