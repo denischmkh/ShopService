@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Type, Any
+from contextlib import asynccontextmanager
+from typing import Type, Any, AsyncGenerator
 from uuid import UUID
 
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from .db_connect import AsyncSessionLocal
 from .models import Base, User, Product, Category, Basket
 from pydantic import BaseModel
 import sqlalchemy as _sql
@@ -17,7 +20,27 @@ from routers.schemas import (UserReadSchema,
                                  ProductReadSchema,
                                  BasketCreateSchema,
                                  BasketReadSchema, UserAuthScheme, )
-from dependencies import get_session, get_password_hash, verify_password
+from .dependencies import verify_password, get_password_hash
+
+
+async def session_generator() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSessionLocal() as session:
+        yield session
+
+
+# Context manager to get session
+@asynccontextmanager
+async def get_session() -> AsyncSession:
+    async for session in session_generator():
+        try:
+            async with session.begin():
+                yield session
+        finally:
+            await session.close()
+
+
+
+
 
 ############################################################################
 #              Abstract class to give an example for child class           #
