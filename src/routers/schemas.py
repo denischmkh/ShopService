@@ -5,6 +5,8 @@ import uuid
 import datetime
 from fastapi.exceptions import HTTPException
 
+from routers.auth.email import create_verify_code
+
 
 #####################################################
 #      Schemas to create and read User datas        #
@@ -60,18 +62,24 @@ class UserDatabaseSchema(BaseModel):
     verified_email: bool = False
     created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
 
+
 #####################################################
 #      Schemas to create and read Verify codes      #
 #####################################################
-def create_verify_code():
-    code = int(''.join([str(random.randint(0, 9)) for _ in range(6)]))
-    return code
+
 
 class CreateVerificationCode(BaseModel):
     id: uuid.UUID = Field(default_factory=uuid.uuid4)
     verify_code: int = Field(default_factory=create_verify_code)
     users_id: uuid.UUID
 
+
+class ReadVerificationCode(BaseModel):
+    id: uuid.UUID
+    verify_code: int
+    users_id: uuid.UUID
+    class Config:
+        orm_mode = True
 
 
 #####################################################

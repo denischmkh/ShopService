@@ -4,8 +4,8 @@ from fastapi import HTTPException, Depends, Form, Query, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from starlette import status
 from routers.auth.utils import decode_token, create_user_form, Token_Scheme, JWT_data, create_access_token
-from routers.schemas import UserCreateSchema, UserReadSchema, UserDatabaseSchema
-from sql_app.crud import UserCRUD
+from routers.schemas import UserCreateSchema, UserReadSchema, UserDatabaseSchema, CreateVerificationCode
+from sql_app.crud import UserCRUD, VerifyCodeCRUD
 from sql_app.models import User
 
 ####################################################
@@ -45,9 +45,15 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
     return user_from_db
 
+async def get_current_verified_user(current_user: UserDatabaseSchema = Depends(get_current_user)):
+    if not current_user.verified_email:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='You are not verified your email')
+    return current_user
+
+
 
 async def deleted_user(user_id: Annotated[UUID, Query()],
-                       current_user: Annotated[UserReadSchema, Depends(get_current_user)]) -> UserReadSchema:
+                       current_user: Annotated[UserReadSchema, Depends(get_current_verified_user)]) -> UserReadSchema:
     if not current_user.admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='You are not admin')
     deleted_user: UserReadSchema = await UserCRUD.delete(user_id)
@@ -65,7 +71,7 @@ async def verity_user_and_make_token(user_data: Annotated[OAuth2PasswordRequestF
     return jwt_token
 
 
-async def banning_user(current_user: Annotated[UserReadSchema, Depends(get_current_user)],
+async def banning_user(current_user: Annotated[UserReadSchema, Depends(get_current_verified_user)],
                        user_id: UUID = Form(...)):
     if not current_user.admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='You are not admin')
@@ -73,9 +79,24 @@ async def banning_user(current_user: Annotated[UserReadSchema, Depends(get_curre
     return banned_user
 
 
-async def unbanning_user(current_user: Annotated[UserReadSchema, Depends(get_current_user)],
+async def unbanning_user(current_user: Annotated[UserReadSchema, Depends(get_current_verified_user)],
                          user_id: UUID = Form(...)):
     if not current_user.admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='You are not admin')
     unbanned_user = await UserCRUD.unban_user(user_id=user_id)
     return unbanned_user
+
+async def create_verify_code_in_db(verify_code_schema: CreateVerificationCode) -> CreateVerificationCode:
+    await VerifyCodeCRUD.create(verify_code_schema)
+    return verify_code_schema
+
+
+async def verify_user(verification_code: int = Form(..., lt=999999, ge=100000),
+                      current_user: UserReadSchema = Depends(get_current_user)):
+    if current_user.verified_email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='You already verified')
+    code_in_db = await VerifyCodeCRUD.read(current_user)
+    if verification_code != code_in_db:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Incorrect code, try again!')
+    await UserCRUD.verifying_user(current_user.id)
+    return current_user

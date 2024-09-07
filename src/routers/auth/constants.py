@@ -10,3 +10,7 @@ class AuthenticationUrls(str, Enum):
     get_current_user_by_token = '/get_current_user'
     ban_user = '/ban_user'
     unban_user = '/unban_user'
+    verify_account = '/verify_account'
+
+VERIFY_CODE_EXPIRE_DAYS = 1
+JWT_TOKEN_EXPIRE_MINUTES = 30

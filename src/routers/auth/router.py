@@ -5,9 +5,10 @@ from typing import Annotated
 
 from starlette import status
 
-from routers.schemas import UserReadSchema, UserDatabaseSchema, UserCreateSchema
+from routers.schemas import UserReadSchema, UserDatabaseSchema, UserCreateSchema, CreateVerificationCode
 from sql_app.models import User
 from .constants import AuthenticationUrls
+from .email import send_email
 from .service import (Token_Scheme,
                       create_user_form,
                       get_current_user,
@@ -15,7 +16,7 @@ from .service import (Token_Scheme,
                       deleted_user,
                       verity_user_and_make_token,
                       create_new_user,
-                      get_all_users_from_db, banning_user, unbanning_user)
+                      get_all_users_from_db, banning_user, unbanning_user, create_verify_code_in_db, verify_user)
 from fastapi_cache.decorator import cache
 
 router = APIRouter(prefix='/auth', tags=['Authorization routers'])
@@ -24,7 +25,14 @@ router = APIRouter(prefix='/auth', tags=['Authorization routers'])
 @router.post(AuthenticationUrls.registration.value, response_model=UserDatabaseSchema, description='Create new user')
 async def create_user(user_scheme: Annotated[UserDatabaseSchema, Depends(create_new_user)],
                       background_task: BackgroundTasks) -> UserDatabaseSchema:
+    verify_token_schema = CreateVerificationCode(users_id=user_scheme.id)
+    background_task.add_task(send_email, body=verify_token_schema.verify_code, to_email=user_scheme.email)
+    await create_verify_code_in_db(verify_token_schema)
     return user_scheme
+
+@router.post(AuthenticationUrls.verify_account.value, response_model=UserReadSchema, description='Verifying user')
+async def verifying_user(verified_user: Annotated[UserReadSchema, Depends(verify_user)]):
+    return verified_user
 
 
 @router.post(AuthenticationUrls.authorization.value, response_model=Token_Scheme,

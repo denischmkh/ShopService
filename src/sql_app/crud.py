@@ -1,3 +1,4 @@
+import datetime
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from typing import Type, Any, AsyncGenerator, Iterable
@@ -6,7 +7,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 from .db_connect import AsyncSessionLocal
-from .models import Base, User, Product, Category, Basket
+from .models import Base, User, Product, Category, Basket, VerificationCode
 from pydantic import BaseModel
 import sqlalchemy as _sql
 from fastapi.exceptions import HTTPException
@@ -18,7 +19,7 @@ from routers.schemas import (UserReadSchema,
                              ProductCreateSchema,
                              ProductReadSchema,
                              BasketCreateSchema,
-                             BasketReadSchema, UserAuthScheme, )
+                             BasketReadSchema, UserAuthScheme, CreateVerificationCode, ReadVerificationCode, )
 from .dependencies import verify_password, get_password_hash
 
 
@@ -54,7 +55,7 @@ class BaseCRUD(ABC):
 
     @classmethod
     @abstractmethod
-    async def read(cls) -> Any:
+    async def read(cls, **kwargs) -> Any:
         """ Read record """
         ...
 
@@ -129,7 +130,10 @@ class UserCRUD(BaseCRUD):
     @classmethod
     async def verify_user(cls, user_data: OAuth2PasswordRequestForm) -> UserReadSchema | None:
         async with get_session() as session:
-            stmt = _sql.select(cls.__db_model).where(cls.__db_model.username == user_data.username)
+            if user_data.username:
+                stmt = _sql.select(cls.__db_model).where(cls.__db_model.username == user_data.username)
+            elif user_data.email:
+                stmt = _sql.select(cls.__db_model).where(cls.__db_model.email == user_data.email)
             result = await session.execute(stmt)
             user: User = result.scalars().first()
             if not user:
@@ -176,6 +180,52 @@ class UserCRUD(BaseCRUD):
             result = await session.execute(stmt)
             user: User = result.scalars().first()
             return user
+    @classmethod
+    async def verifying_user(cls, user_id: UUID):
+        async with get_session() as session:
+            stmt = _sql.update(cls.__db_model).where(cls.__db_model.id == user_id).values(verified_email=True)
+            await session.execute(stmt)
+            await session.commit()
+
+        async with get_session() as session:
+            stmt = _sql.select(cls.__db_model).where(cls.__db_model.id == user_id)
+            result = await session.execute(stmt)
+            user = result.scalars().first()
+            return user
+
+class VerifyCodeCRUD(BaseCRUD):
+    """ Verification Codes """
+    __db_model = VerificationCode
+
+    @classmethod
+    async def create(cls, code_schema: CreateVerificationCode) -> CreateVerificationCode:
+        async with get_session() as session:
+            stmt = _sql.select(cls.__db_model).where(cls.__db_model.users_id == code_schema.users_id)
+            result = await session.execute(stmt)
+            code_record = result.scalars().first()
+            if not code_record:
+                stmt = _sql.insert(cls.__db_model).values(**code_schema.dict())
+                await session.execute(stmt)
+            else:
+                stmt_delete_old = _sql.delete(cls.__db_model).where(cls.__db_model.users_id == code_schema.users_id)
+                await session.execute(stmt_delete_old)
+                await session.commit()
+                stmt = _sql.insert(cls.__db_model).values(**code_schema.dict())
+                await session.execute(stmt)
+            return code_record
+    @classmethod
+    async def read(cls, user_schema: UserReadSchema) -> int:
+        async with get_session() as session:
+            stmt = _sql.select(cls.__db_model).where(cls.__db_model.users_id == user_schema.id)
+            result = await session.execute(stmt)
+            verify_code: VerificationCode = result.scalars().first()
+            if not verify_code or datetime.datetime.utcnow() > verify_code.expire_to:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Code invalid or expired, please request a new code')
+            return int(verify_code.verify_code)
+
+    @classmethod
+    async def delete(cls, **kwargs) -> Any:
+        pass
 
 
 class CategoryCRUD(BaseCRUD):

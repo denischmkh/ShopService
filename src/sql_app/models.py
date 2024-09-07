@@ -3,6 +3,8 @@ from datetime import timedelta
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import Column, UUID, Integer, String, Boolean, DateTime, DECIMAL
 
+from routers.auth.constants import VERIFY_CODE_EXPIRE_DAYS
+
 Base = declarative_base()
 
 
@@ -65,4 +67,4 @@ class VerificationCode(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, unique=True, nullable=False)
     verify_code = Column(DECIMAL(6), nullable=False)
     users_id = Column(UUID)
-    expire_to = Column(DateTime, default=lambda: datetime.utcnow() + timedelta(days=1))
+    expire_to = Column(DateTime, default=lambda: datetime.utcnow() + timedelta(days=VERIFY_CODE_EXPIRE_DAYS))

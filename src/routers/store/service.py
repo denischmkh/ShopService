@@ -3,7 +3,7 @@ from uuid import UUID
 
 from starlette import status
 
-from routers.auth.service import get_current_user
+from routers.auth.service import get_current_user, get_current_verified_user
 from routers.schemas import CategoryReadSchema, CategoryCreateSchema, UserReadSchema
 from sql_app.crud import CategoryCRUD
 from sql_app.models import Category, User
@@ -19,14 +19,14 @@ def create_category_form(title: str = Form(..., min_length=2, max_length=30)):
     return category_form
 
 async def create_new_category(category_form: Annotated[CategoryCreateSchema, Depends(create_category_form)],
-                              current_user: Annotated[User, Depends(get_current_user)]) -> CategoryCreateSchema:
+                              current_user: Annotated[User, Depends(get_current_verified_user)]) -> CategoryCreateSchema:
     if not current_user.admin:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="You don't have permission to this action")
     result = await CategoryCRUD.create(category_form)
     return result
 
 async def delete_category(category_id: UUID,
-                          current_user: Annotated[User, Depends(get_current_user)]):
+                          current_user: Annotated[User, Depends(get_current_verified_user)]):
     if not current_user.admin:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="You don't have permission to this action")
     result = await CategoryCRUD.delete(category_id)
