@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
-from typing import Type, Any, AsyncGenerator
+from typing import Type, Any, AsyncGenerator, Iterable
 from uuid import UUID
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,7 +54,7 @@ class BaseCRUD(ABC):
 
     @classmethod
     @abstractmethod
-    async def read(cls, **kwargs) -> Any:
+    async def read(cls) -> Any:
         """ Read record """
         ...
 
@@ -118,6 +118,7 @@ class UserCRUD(BaseCRUD):
             stmt = _sql.select(cls.__db_model)
             result = await session.execute(stmt)
             users = result.scalars().all()
+            print(users)
             return users
 
     @classmethod
@@ -132,3 +133,77 @@ class UserCRUD(BaseCRUD):
             if not verify:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Incorrect password')
             return user
+
+    @classmethod
+    async def ban_user(cls, user_id: UUID) -> UserReadSchema:
+        async with get_session() as session:
+            stmt = _sql.select(cls.__db_model).where(cls.__db_model.id == user_id)
+            result = await session.execute(stmt)
+            user: User = result.scalars().first()
+            if not user:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
+            if not user.active:
+                raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail='User already banned')
+            stmt = _sql.update(cls.__db_model).where(cls.__db_model.id == user_id).values(active=False)
+            await session.execute(stmt)
+            await session.commit()
+        async with get_session() as session:
+            stmt = _sql.select(cls.__db_model).where(cls.__db_model.id == user_id)
+            result = await session.execute(stmt)
+            user: User = result.scalars().first()
+            return user
+
+    @classmethod
+    async def unban_user(cls, user_id: UUID) -> UserReadSchema:
+        async with get_session() as session:
+            stmt = _sql.select(cls.__db_model).where(cls.__db_model.id == user_id)
+            result = await session.execute(stmt)
+            user: User = result.scalars().first()
+            if not user:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
+            if user.active:
+                raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail='User already unbanned')
+            stmt = _sql.update(cls.__db_model).where(cls.__db_model.id == user_id).values(active=True)
+            await session.execute(stmt)
+            await session.commit()
+        async with get_session() as session:
+            stmt = _sql.select(cls.__db_model).where(cls.__db_model.id == user_id)
+            result = await session.execute(stmt)
+            user: User = result.scalars().first()
+            return user
+
+
+class CategoryCRUD(BaseCRUD):
+    __db_model = Category
+
+    @classmethod
+    async def create(cls, category_create_schema: CategoryCreateSchema) -> CategoryCreateSchema:
+        async with get_session() as session:
+            stmt = _sql.select(cls.__db_model).where(cls.__db_model.title == category_create_schema.title)
+            request = await session.execute(statement=stmt)
+            result = request.scalars().first()
+            if result:
+                raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail='Category already exist')
+            stmt = _sql.insert(cls.__db_model).values(**category_create_schema.dict())
+            await session.execute(statement=stmt)
+            return category_create_schema
+
+    @classmethod
+    async def read(cls) -> Iterable:
+        async with get_session() as session:
+            stmt = _sql.select(cls.__db_model)
+            result = await session.execute(stmt)
+            categories = result.scalars().all()
+            return categories
+
+    @classmethod
+    async def delete(cls, category_id: UUID) -> CategoryReadSchema | None:
+        async with get_session() as session:
+            stmt = _sql.select(cls.__db_model).where(cls.__db_model.id == category_id)
+            result = await session.execute(stmt)
+            category_schema: Category = result.scalars().first()
+            if not category_schema:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Category not found!')
+            delete_stmt = _sql.delete(cls.__db_model).where(cls.__db_model.id == category_id)
+            await session.execute(delete_stmt)
+            return category_schema

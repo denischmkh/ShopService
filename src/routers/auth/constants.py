@@ -8,3 +8,5 @@ class AuthenticationUrls(str, Enum):
     delete_user = '/delete_user'
     authorization = '/login'
     get_current_user_by_token = '/get_current_user'
+    ban_user = '/ban_user'
+    unban_user = '/unban_user'

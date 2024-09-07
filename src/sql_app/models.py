@@ -1,3 +1,5 @@
+from datetime import datetime
+from datetime import timedelta
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import Column, UUID, Integer, String, Boolean, DateTime, DECIMAL
 from routers.schemas import UserReadSchema
@@ -32,7 +34,6 @@ class Category(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, unique=True, nullable=False)
     title = Column(String(length=30), nullable=False)
     created_at = Column(DateTime)
-    active_to = Column(DateTime)
 
 
 class Product(Base):
@@ -55,3 +56,6 @@ class Basket(Base):
     products_id = Column(UUID(as_uuid=True))  # ID from "store" table
     users_id = Column(UUID(as_uuid=True))  # ID from "users" table
     quantity = Column(Integer(), nullable=False)  # Product quantity in user basket
+
+
+

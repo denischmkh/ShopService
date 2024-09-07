@@ -30,6 +30,7 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime)
     )
 
+
     # Create 'categories' table
     op.create_table(
         'categories',

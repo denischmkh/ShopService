@@ -63,6 +63,9 @@ class CategoryReadSchema(BaseModel):
     title: str
     created_at: datetime.datetime
 
+    class Config:
+        orm_mode = True
+
 
 class CategoryCreateSchema(BaseModel):
     id: uuid.UUID = Field(default_factory=uuid.uuid4)
