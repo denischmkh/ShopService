@@ -1,7 +1,10 @@
 import asyncio
 
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, Response, BackgroundTasks
 from typing import Annotated
+
+from starlette import status
+
 from routers.schemas import UserReadSchema, UserDatabaseSchema, UserCreateSchema
 from sql_app.models import User
 from .constants import AuthenticationUrls
@@ -19,9 +22,9 @@ router = APIRouter(prefix='/auth', tags=['Authorization routers'])
 
 
 @router.post(AuthenticationUrls.registration.value, response_model=UserDatabaseSchema, description='Create new user')
-async def create_user(user_scheme: Annotated[UserCreateSchema, Depends(create_new_user)]) -> UserDatabaseSchema:
-    result: UserDatabaseSchema = await create_new_user(user_scheme)
-    return result
+async def create_user(user_scheme: Annotated[UserDatabaseSchema, Depends(create_new_user)],
+                      background_task: BackgroundTasks) -> UserDatabaseSchema:
+    return user_scheme
 
 
 @router.post(AuthenticationUrls.authorization.value, response_model=Token_Scheme,

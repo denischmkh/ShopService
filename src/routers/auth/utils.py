@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone, timedelta
 from typing import Annotated
 
@@ -5,6 +6,7 @@ import jwt
 from fastapi import HTTPException, Form
 from jwt import ExpiredSignatureError
 from pydantic import BaseModel
+from starlette import status
 
 import config
 from routers.schemas import UserCreateSchema
@@ -24,17 +26,20 @@ class Token_Scheme(BaseModel):
 
 def create_user_form(username: str = Form(description='Username', min_length=3, max_length=30),
                      password1: str = Form(description='Password', min_length=8),
-                     password2: str = Form(description='Repeat password'),
+                     password2: str = Form(description='Repeat password', min_length=8),
+                     email: str = Form(description='Email adress'),
                      Admin_key: Annotated[str | None, Form(description='Admin Key')] = None) -> UserCreateSchema:
     if password1 != password2:
-        raise HTTPException(status_code=401, detail='Second password incorrect!')
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Second password incorrect!')
+    if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Incorrect email')
     elif not Admin_key:
-        user_create_schema = UserCreateSchema(username=username, password=password1, admin=False)
+        user_create_schema = UserCreateSchema(username=username, password=password1, admin=False, email=email)
         return user_create_schema
     elif Admin_key != config.ADMIN_SECRET:
-        raise HTTPException(status_code=401, detail='Incorrect admin key')
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Incorrect admin key')
     else:
-        user_create_schema = UserCreateSchema(username=username, password=password1, admin=True)
+        user_create_schema = UserCreateSchema(username=username, password=password1, admin=True, email=email)
         return user_create_schema
 
 

@@ -74,9 +74,14 @@ class UserCRUD(BaseCRUD):
         async with get_session() as session:
             stmt = _sql.select(cls.__db_model).where(cls.__db_model.username == user_create_schema.username)
             result = await session.execute(stmt)
-            existing_user = result.scalars().first()
+            existing_user: User = result.scalars().first()
             if existing_user:
                 raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail='Username already exists')
+            stmt = _sql.select(cls.__db_model).where(cls.__db_model.email == user_create_schema.email)
+            result = await session.execute(stmt)
+            existing_user_email = result.scalars().first()
+            if existing_user_email:
+                raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail='Email already exists')
             hashed_password = get_password_hash(user_create_schema.password)
             user_database_schema = UserDatabaseSchema(**user_create_schema.dict(), hashed_password=hashed_password)
             new_user = cls.__db_model(

@@ -2,7 +2,6 @@ from datetime import datetime
 from datetime import timedelta
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import Column, UUID, Integer, String, Boolean, DateTime, DECIMAL
-from routers.schemas import UserReadSchema
 
 Base = declarative_base()
 
@@ -15,6 +14,8 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     admin = Column(Boolean, nullable=True)
     active = Column(Boolean)
+    email = Column(String, nullable=False)
+    verified_email = Column(Boolean)
     created_at = Column(DateTime)
 
     def to_dict(self):
@@ -58,4 +59,10 @@ class Basket(Base):
     quantity = Column(Integer(), nullable=False)  # Product quantity in user basket
 
 
-
+class VerificationCode(Base):
+    """ Codes to verify email """
+    __tablename__ = 'verification_codes'
+    id = Column(UUID(as_uuid=True), primary_key=True, unique=True, nullable=False)
+    verify_code = Column(DECIMAL(6), nullable=False)
+    users_id = Column(UUID)
+    expire_to = Column(DateTime, default=lambda: datetime.utcnow() + timedelta(days=1))

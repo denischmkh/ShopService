@@ -1,4 +1,6 @@
-from pydantic import BaseModel, field_validator, Field
+import random
+
+from pydantic import BaseModel, field_validator, Field, EmailStr
 import uuid
 import datetime
 from fastapi.exceptions import HTTPException
@@ -10,6 +12,8 @@ from fastapi.exceptions import HTTPException
 class UserReadSchema(BaseModel):
     id: uuid.UUID
     username: str
+    email: EmailStr
+    verified_email: bool
     active: bool
     admin: bool
     created_at: datetime.datetime
@@ -22,6 +26,8 @@ class UserCreateSchema(BaseModel):
     username: str = Field(min_length=3, max_length=30)
     password: str = Field(min_length=8)
     admin: bool = False
+    email: EmailStr
+    verified_email: bool = False
 
     @field_validator('username', mode='before')
     @classmethod
@@ -50,7 +56,22 @@ class UserDatabaseSchema(BaseModel):
     hashed_password: str
     active: bool = Field(default=True)
     admin: bool
+    email: EmailStr
+    verified_email: bool = False
     created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+
+#####################################################
+#      Schemas to create and read Verify codes      #
+#####################################################
+def create_verify_code():
+    code = int(''.join([str(random.randint(0, 9)) for _ in range(6)]))
+    return code
+
+class CreateVerificationCode(BaseModel):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4)
+    verify_code: int = Field(default_factory=create_verify_code)
+    users_id: uuid.UUID
+
 
 
 #####################################################
