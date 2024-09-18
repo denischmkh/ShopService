@@ -6,20 +6,15 @@ from uuid import UUID
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
+
+from routers.auth.schemas import UserCreateSchema, UserDatabaseSchema, UserReadSchema
+from routers.email.schemas import CreateVerificationCode
+from routers.schemas import CategoryCreateSchema, CategoryReadSchema
 from .db_connect import AsyncSessionLocal
 from .models import Base, User, Product, Category, Basket, VerificationCode
 from pydantic import BaseModel
 import sqlalchemy as _sql
 from fastapi.exceptions import HTTPException
-from routers.schemas import (UserReadSchema,
-                             UserCreateSchema,
-                             UserDatabaseSchema,
-                             CategoryReadSchema,
-                             CategoryCreateSchema,
-                             ProductCreateSchema,
-                             ProductReadSchema,
-                             BasketCreateSchema,
-                             BasketReadSchema, UserAuthScheme, CreateVerificationCode, ReadVerificationCode, )
 from .dependencies import verify_password, get_password_hash
 
 
@@ -124,7 +119,6 @@ class UserCRUD(BaseCRUD):
             stmt = _sql.select(cls.__db_model)
             result = await session.execute(stmt)
             users = result.scalars().all()
-            print(users)
             return users
 
     @classmethod
@@ -134,6 +128,8 @@ class UserCRUD(BaseCRUD):
                 stmt = _sql.select(cls.__db_model).where(cls.__db_model.username == user_data.username)
             elif user_data.email:
                 stmt = _sql.select(cls.__db_model).where(cls.__db_model.email == user_data.email)
+            else:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Missing username or login')
             result = await session.execute(stmt)
             user: User = result.scalars().first()
             if not user:
@@ -163,7 +159,7 @@ class UserCRUD(BaseCRUD):
             return user
 
     @classmethod
-    async def unban_user(cls, user_id: UUID) -> UserReadSchema:
+    async def unban_user(cls, user_id: UUID) -> User:
         async with get_session() as session:
             stmt = _sql.select(cls.__db_model).where(cls.__db_model.id == user_id)
             result = await session.execute(stmt)
@@ -181,7 +177,7 @@ class UserCRUD(BaseCRUD):
             user: User = result.scalars().first()
             return user
     @classmethod
-    async def verifying_user(cls, user_id: UUID):
+    async def verifying_user(cls, user_id: UUID) -> User:
         async with get_session() as session:
             stmt = _sql.update(cls.__db_model).where(cls.__db_model.id == user_id).values(verified_email=True)
             await session.execute(stmt)
@@ -206,13 +202,16 @@ class VerifyCodeCRUD(BaseCRUD):
             if not code_record:
                 stmt = _sql.insert(cls.__db_model).values(**code_schema.dict())
                 await session.execute(stmt)
+                return code_schema
             else:
                 stmt_delete_old = _sql.delete(cls.__db_model).where(cls.__db_model.users_id == code_schema.users_id)
                 await session.execute(stmt_delete_old)
                 await session.commit()
-                stmt = _sql.insert(cls.__db_model).values(**code_schema.dict())
-                await session.execute(stmt)
-            return code_record
+                await session.close()
+                async with get_session() as session:
+                    stmt = _sql.insert(cls.__db_model).values(**code_schema.dict())
+                    await session.execute(stmt)
+            return code_schema
     @classmethod
     async def read(cls, user_schema: UserReadSchema) -> int:
         async with get_session() as session:
@@ -224,8 +223,12 @@ class VerifyCodeCRUD(BaseCRUD):
             return int(verify_code.verify_code)
 
     @classmethod
-    async def delete(cls, **kwargs) -> Any:
-        pass
+    async def delete(cls, user_schema: UserReadSchema) -> UserReadSchema:
+        async with get_session() as session:
+            stmt = _sql.delete(cls.__db_model).where(cls.__db_model.id == user_schema.id)
+            await session.execute(stmt)
+            await session.commit()
+            return user_schema
 
 
 class CategoryCRUD(BaseCRUD):

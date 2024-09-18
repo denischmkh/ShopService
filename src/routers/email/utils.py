@@ -1,21 +1,31 @@
+from datetime import datetime, timedelta
 import random
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.mime.image import MIMEImage
-from email.mime.base import MIMEBase
-from email import encoders
-
 import config
 
+from routers.email.constants import VERIFY_CODE_EXPIRE_DAYS
 
-def send_email(body, to_email, from_email=config.EMAIL_ADRESS, password=config.EMAIL_PASS,
-               subject='Your Verification Code', ):
+
+def verify_code_expire() -> datetime:
+    expire_to = datetime.utcnow() + timedelta(days=VERIFY_CODE_EXPIRE_DAYS)
+    return expire_to
+
+def create_verify_code():
+    code = random.randint(100000, 999999)
+    return code
+
+
+
+
+
+def send_email(body, to_email):
     # Create a multipart message and set headers
     msg = MIMEMultipart()
-    msg['From'] = from_email
+    msg['From'] = config.EMAIL_ADRESS
     msg['To'] = to_email
-    msg['Subject'] = subject
+    msg['Subject'] = 'Your Verification Code'
 
     # Add HTML body
     html = f"""
@@ -71,7 +81,7 @@ def send_email(body, to_email, from_email=config.EMAIL_ADRESS, password=config.E
 
     # Connect to the Gmail SMTP server and send the email
     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-        smtp.login(from_email, password)
+        smtp.login(from_email, config.EMAIL_PASS)
         smtp.send_message(msg)
 
 
@@ -79,11 +89,3 @@ def send_email(body, to_email, from_email=config.EMAIL_ADRESS, password=config.E
 # Example usage
 from_email = config.EMAIL_ADRESS
 password = config.EMAIL_PASS
-
-
-
-
-
-def create_verify_code():
-    code = int(''.join([str(random.randint(0, 9)) for _ in range(6)]))
-    return code

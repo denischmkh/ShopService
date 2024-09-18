@@ -1,0 +1,6 @@
+VERIFY_ACCOUNT_URL = '/verify'
+RESEND_CODE_URL = '/send_code'
+
+
+
+VERIFY_CODE_EXPIRE_DAYS = 1

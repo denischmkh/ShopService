@@ -1,16 +1,12 @@
-from enum import Enum
+REGISTRATION_URL = '/register'
+FOUND_USER_BY_ID_OR_USERNAME_URL = '/found_user'
+GET_ALL_USERS_FROM_DB_URL = '/users'
+DELETE_USER_URL = '/delete'
+AUTHORIZATION_URL = '/login'
+GET_CURRENT_USER_BY_TOKEN_URL = '/current_user'
+BAN_USER_URL = '/ban'
+UNBAN_USER_URL = '/unban'
 
-
-class AuthenticationUrls(str, Enum):
-    registration = '/register'
-    found_user_by_id_or_username = '/found_user'
-    get_all_users_from_db = '/all_users'
-    delete_user = '/delete_user'
-    authorization = '/login'
-    get_current_user_by_token = '/get_current_user'
-    ban_user = '/ban_user'
-    unban_user = '/unban_user'
-    verify_account = '/verify_account'
-
-VERIFY_CODE_EXPIRE_DAYS = 1
 JWT_TOKEN_EXPIRE_MINUTES = 30
+
+PAGINATOR_ITEMS_PER_PAGE = 10

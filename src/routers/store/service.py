@@ -4,7 +4,7 @@ from uuid import UUID
 from starlette import status
 
 from routers.auth.service import get_current_user, get_current_verified_user
-from routers.schemas import CategoryReadSchema, CategoryCreateSchema, UserReadSchema
+from routers.schemas import CategoryReadSchema, CategoryCreateSchema
 from sql_app.crud import CategoryCRUD
 from sql_app.models import Category, User
 from fastapi import Form, Depends, HTTPException
@@ -12,7 +12,8 @@ from fastapi import Form, Depends, HTTPException
 
 async def get_all_categories() -> list[CategoryReadSchema]:
     categories = await CategoryCRUD.read()
-    return categories
+    categories_schemas = [CategoryReadSchema.from_orm(category) for category in categories]
+    return categories_schemas
 
 def create_category_form(title: str = Form(..., min_length=2, max_length=30)):
     category_form = CategoryCreateSchema(title=title)

@@ -9,12 +9,13 @@ from fastapi import FastAPI, APIRouter
 from routers.auth.router import router as users_routers
 from routers.store.category_router import router as categories_router
 from routers.store.product_router import router as products_router
+from routers.email.router import router as email_router
 
 store_routers = APIRouter(prefix='/store')
 store_routers.include_router(categories_router)
 store_routers.include_router(products_router)
 
-routers = [users_routers, store_routers]
+routers = [users_routers, email_router, store_routers]
 
 
 @asynccontextmanager

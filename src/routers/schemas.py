@@ -1,85 +1,7 @@
-import random
-
-from pydantic import BaseModel, field_validator, Field, EmailStr
+from pydantic import BaseModel, field_validator, Field
 import uuid
 import datetime
 from fastapi.exceptions import HTTPException
-
-from routers.auth.email import create_verify_code
-
-
-#####################################################
-#      Schemas to create and read User datas        #
-#####################################################
-class UserReadSchema(BaseModel):
-    id: uuid.UUID
-    username: str
-    email: EmailStr
-    verified_email: bool
-    active: bool
-    admin: bool
-    created_at: datetime.datetime
-
-    class Config:
-        orm_mode = True
-
-
-class UserCreateSchema(BaseModel):
-    username: str = Field(min_length=3, max_length=30)
-    password: str = Field(min_length=8)
-    admin: bool = False
-    email: EmailStr
-    verified_email: bool = False
-
-    @field_validator('username', mode='before')
-    @classmethod
-    def validate_username(cls, username: str):
-        if len(username) < 3 or len(username) > 30:
-            raise HTTPException(status_code=422, detail='Username must contain minimum 3 characters, maximum 30')
-        return username
-
-    @field_validator('password', mode='before')
-    @classmethod
-    def validate_password(cls, password: str):
-        if len(password) < 8:
-            raise HTTPException(status_code=422, detail='Password too short!')
-        if not any(el.isupper() for el in password):
-            raise HTTPException(status_code=422, detail='Password must contain at least one capital letter')
-        return password
-
-
-class UserAuthScheme(UserCreateSchema):
-    pass
-
-
-class UserDatabaseSchema(BaseModel):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4)
-    username: str
-    hashed_password: str
-    active: bool = Field(default=True)
-    admin: bool
-    email: EmailStr
-    verified_email: bool = False
-    created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
-
-
-#####################################################
-#      Schemas to create and read Verify codes      #
-#####################################################
-
-
-class CreateVerificationCode(BaseModel):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4)
-    verify_code: int = Field(default_factory=create_verify_code)
-    users_id: uuid.UUID
-
-
-class ReadVerificationCode(BaseModel):
-    id: uuid.UUID
-    verify_code: int
-    users_id: uuid.UUID
-    class Config:
-        orm_mode = True
 
 
 #####################################################
@@ -93,7 +15,7 @@ class CategoryReadSchema(BaseModel):
     created_at: datetime.datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class CategoryCreateSchema(BaseModel):
@@ -123,7 +45,7 @@ class ProductCreateSchema(BaseModel):
             raise HTTPException(status_code=422, detail='Price must be a positive value.')
 
         if price > 9999999.99:
-            raise HTTPException(status_code=422, detail='Price exceeds the maximum allowed value of 9999999.99.')
+            raise HTTPException(status_code=422, detail='Price exceeds the maximum allowed value of 9999999.99')
 
         if round(price, 2) != price:
             raise HTTPException(status_code=422, detail='Price must have at most two decimal places.')

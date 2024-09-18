@@ -3,7 +3,7 @@ from datetime import timedelta
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import Column, UUID, Integer, String, Boolean, DateTime, DECIMAL
 
-from routers.auth.constants import VERIFY_CODE_EXPIRE_DAYS
+from routers.email.constants import VERIFY_CODE_EXPIRE_DAYS
 
 Base = declarative_base()
 

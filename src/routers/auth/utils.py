@@ -10,7 +10,7 @@ from starlette import status
 
 import config
 from routers.auth.constants import JWT_TOKEN_EXPIRE_MINUTES
-from routers.schemas import UserCreateSchema
+from routers.auth.schemas import UserCreateSchema
 
 ALGORITHM = "HS256"
 
@@ -29,7 +29,8 @@ def create_user_form(username: str = Form(description='Username', min_length=3, 
                      password1: str = Form(description='Password', min_length=8),
                      password2: str = Form(description='Repeat password', min_length=8),
                      email: str = Form(description='Email adress'),
-                     Admin_key: Annotated[str | None, Form(description='Admin Key')] = None) -> UserCreateSchema:
+                     Admin_key: Annotated[str | None, Form(description='Admin Key')] = None,
+                     ):
     if password1 != password2:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Second password incorrect!')
     if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
@@ -63,3 +64,5 @@ def decode_token(access_token: str) -> dict | None:
         return decode_token
     except ExpiredSignatureError:
         return None
+
+
