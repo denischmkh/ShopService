@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
-from routers.auth.schemas import UserCreateSchema, UserDatabaseSchema, UserReadSchema
+from routers.auth.schemas import UserCreateSchema, UserDatabaseSchema, UserReadSchema, UserLoginSchema
 from routers.email.schemas import CreateVerificationCode
 from routers.schemas import CategoryCreateSchema, CategoryReadSchema
 from .db_connect import AsyncSessionLocal
@@ -65,17 +65,29 @@ class UserCRUD(BaseCRUD):
     """ Controlling interaction with User """
     __db_model = User
 
+
+
+    @classmethod
+    async def read(cls, user_id: UUID | None = None, username: str | None = None, email: str | None = None) -> UserReadSchema | None:
+        async with get_session() as session:
+            if user_id or username or email:
+                stmt = _sql.select(cls.__db_model).where(
+                    _sql.or_(cls.__db_model.username == username, cls.__db_model.id == user_id, cls.__db_model.email == email))
+            else:
+                return None
+            result = await session.execute(stmt)
+            user: User = result.scalars().first()
+            if user is None:
+                return user
+            return user
+
     @classmethod
     async def create(cls, user_create_schema: UserCreateSchema) -> UserDatabaseSchema:
         async with get_session() as session:
-            stmt = _sql.select(cls.__db_model).where(cls.__db_model.username == user_create_schema.username)
-            result = await session.execute(stmt)
-            existing_user: User = result.scalars().first()
+            existing_user: UserReadSchema | None = await cls.read(username=user_create_schema.username)
             if existing_user:
                 raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail='Username already exists')
-            stmt = _sql.select(cls.__db_model).where(cls.__db_model.email == user_create_schema.email)
-            result = await session.execute(stmt)
-            existing_user_email = result.scalars().first()
+            existing_user_email: UserReadSchema | None = await cls.read(email=user_create_schema.email)
             if existing_user_email:
                 raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail='Email already exists')
             hashed_password = get_password_hash(user_create_schema.password)
@@ -86,20 +98,6 @@ class UserCRUD(BaseCRUD):
             session.add(new_user)
             await session.commit()
             return user_database_schema
-
-    @classmethod
-    async def read(cls, user_id: UUID | None, username: str | None) -> UserReadSchema | None:
-        async with get_session() as session:
-            if user_id or username:
-                stmt = _sql.select(cls.__db_model).where(
-                    _sql.or_(cls.__db_model.username == username, cls.__db_model.id == user_id))
-            else:
-                return None
-            result = await session.execute(stmt)
-            user: User = result.scalars().first()
-            if user is None:
-                return user
-            return user
 
     @classmethod
     async def delete(cls, user_id: UUID) -> UserReadSchema | None:
@@ -122,7 +120,7 @@ class UserCRUD(BaseCRUD):
             return users
 
     @classmethod
-    async def verify_user(cls, user_data: OAuth2PasswordRequestForm) -> UserReadSchema | None:
+    async def verify_user(cls, user_data: UserLoginSchema) -> UserReadSchema | None:
         async with get_session() as session:
             if user_data.username:
                 stmt = _sql.select(cls.__db_model).where(cls.__db_model.username == user_data.username)

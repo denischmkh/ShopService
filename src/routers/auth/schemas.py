@@ -51,3 +51,9 @@ class UserDatabaseSchema(BaseModel):
     email: EmailStr
     verified_email: bool = False
     created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+
+
+class UserLoginSchema(BaseModel):
+    username: str | None = None
+    email: EmailStr | None = None
+    password: str

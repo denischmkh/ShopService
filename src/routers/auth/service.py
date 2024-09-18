@@ -1,19 +1,19 @@
 from typing import Annotated
 from uuid import UUID
 from fastapi import HTTPException, Depends, Form, Query
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette import status
 
 from .paginator import Paginator
-from .utils import decode_token, create_user_form, Token_Scheme, JWT_data, create_access_token
-from .schemas import UserCreateSchema, UserReadSchema, UserDatabaseSchema
+from .utils import decode_token, create_user_form, Token_Scheme, JWT_data, create_access_token, login_user_form
+from .schemas import UserCreateSchema, UserReadSchema, UserDatabaseSchema, UserLoginSchema
 from sql_app.crud import UserCRUD
 from sql_app.models import User
 
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+bearer = HTTPBearer()
 
 
 async def create_new_user(user_create_schema: Annotated[UserCreateSchema, Depends(create_user_form)]) -> UserReadSchema:
@@ -37,15 +37,15 @@ async def get_all_users_from_db(page: Annotated[int, Query(..., ge=1)] = 1) -> l
     return paginator.paginated_items
 
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
-    payload: dict = decode_token(token)
+async def get_current_user(bearer_token: Annotated[HTTPAuthorizationCredentials, Depends(bearer)]):
+    payload: dict = decode_token(bearer_token.credentials)
     user_from_db: UserReadSchema = await UserCRUD.read(user_id=payload.get("id"), username=payload.get("username"))
     if not user_from_db:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
     return user_from_db
 
 
-async def get_current_verified_user(current_user: UserDatabaseSchema = Depends(get_current_user)):
+async def get_current_verified_user(current_user: UserReadSchema = Depends(get_current_user)):
     if not current_user.verified_email:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='You are not verified your email')
     return current_user
@@ -61,7 +61,9 @@ async def deleted_user(user_id: Annotated[UUID, Query()],
     return deleted_user
 
 
-async def verity_user_and_make_token(user_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token_Scheme:
+async def verity_user_and_make_token(user_data: Annotated[UserLoginSchema, Depends(login_user_form)]) -> Token_Scheme:
+    if not user_data.email and not user_data.username:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Please, enter username or email')
     user: User | None = await UserCRUD.verify_user(user_data)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')

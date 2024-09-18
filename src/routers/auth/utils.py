@@ -10,7 +10,7 @@ from starlette import status
 
 import config
 from routers.auth.constants import JWT_TOKEN_EXPIRE_MINUTES
-from routers.auth.schemas import UserCreateSchema
+from routers.auth.schemas import UserCreateSchema, UserLoginSchema
 
 ALGORITHM = "HS256"
 
@@ -65,4 +65,7 @@ def decode_token(access_token: str) -> dict | None:
     except ExpiredSignatureError:
         return None
 
-
+def login_user_form(username: Annotated[str | None, Form()] = None,
+                    email: Annotated[str | None, Form()] = None,
+                    password: str = Form()) -> UserLoginSchema:
+    return UserLoginSchema(username=username, email=email, password=password)
