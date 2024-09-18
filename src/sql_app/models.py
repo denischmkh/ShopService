@@ -16,7 +16,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     admin = Column(Boolean, nullable=True)
     active = Column(Boolean)
-    email = Column(String, nullable=False)
+    email = Column(String, nullable=False, unique=True)
     verified_email = Column(Boolean)
     created_at = Column(DateTime)
 
@@ -43,13 +43,13 @@ class Product(Base):
     """ Products Table """
     __tablename__ = 'store'
     id = Column(UUID(as_uuid=True), primary_key=True, unique=True, nullable=False)
-    title = Column(String(length=30), nullable=False)
+    title = Column(String(length=30), nullable=False, index=True)
     description = Column(String(length=300), nullable=True)
     price = Column(DECIMAL(9, 2), nullable=False)
     image = Column(String, unique=True, nullable=True)  # Link to image in static files with store
     discount = Column(Integer, nullable=True)  # Discount for price
     created_at = Column(DateTime)
-    categories_id = Column(UUID(as_uuid=True), nullable=True)
+    categories_id = Column(UUID(as_uuid=True), nullable=True, index=True)
 
 
 class Basket(Base):
@@ -57,7 +57,7 @@ class Basket(Base):
     __tablename__ = 'baskets'
     id = Column(UUID(as_uuid=True), primary_key=True, unique=True, nullable=False)
     products_id = Column(UUID(as_uuid=True))  # ID from "store" table
-    users_id = Column(UUID(as_uuid=True))  # ID from "users" table
+    users_id = Column(UUID(as_uuid=True), index=True)  # ID from "users" table
     quantity = Column(Integer(), nullable=False)  # Product quantity in user basket
 
 
@@ -66,5 +66,5 @@ class VerificationCode(Base):
     __tablename__ = 'verification_codes'
     id = Column(UUID(as_uuid=True), primary_key=True, unique=True, nullable=False)
     verify_code = Column(DECIMAL(6), nullable=False)
-    users_id = Column(UUID)
+    users_id = Column(UUID, index=True)
     expire_to = Column(DateTime, default=lambda: datetime.utcnow() + timedelta(days=VERIFY_CODE_EXPIRE_DAYS))
