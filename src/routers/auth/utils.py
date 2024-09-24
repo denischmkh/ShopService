@@ -5,24 +5,15 @@ from typing import Annotated
 import jwt
 from fastapi import HTTPException, Form
 from jwt import ExpiredSignatureError
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from starlette import status
 
 import config
-from routers.auth.constants import JWT_TOKEN_EXPIRE_MINUTES
-from routers.auth.schemas import UserCreateSchema, UserLoginSchema
+
+from routers.auth.schemas import UserCreateSchema, UserLoginSchema, AccessTokenScheme, RefreshTokenScheme
+
 
 ALGORITHM = "HS256"
-
-
-class JWT_data(BaseModel):
-    id: str
-    username: str
-
-
-class Token_Scheme(BaseModel):
-    access_token: str
-    token_type: str = 'Bearer'
 
 
 def create_user_form(username: str = Form(description='Username', min_length=3, max_length=30),
@@ -45,27 +36,25 @@ def create_user_form(username: str = Form(description='Username', min_length=3, 
         return user_create_schema
 
 
-def create_access_token(data: JWT_data, expires_delta: timedelta | None = None):
+def create_access_and_refresh_token(data: AccessTokenScheme | RefreshTokenScheme,
+                                    expires_delta: timedelta):
     data = data.dict()
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=JWT_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + expires_delta
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, config.JWT_SECRET_TOKEN, algorithm=ALGORITHM)
-    token_scheme = Token_Scheme(access_token=encoded_jwt)
-    return token_scheme
+    return encoded_jwt
 
 
-def decode_token(access_token: str) -> dict | None:
+def decode_token(token: str) -> dict | None:
     try:
-        decode_token = jwt.decode(access_token, config.JWT_SECRET_TOKEN, algorithms=[ALGORITHM])
+        decode_token = jwt.decode(token, config.JWT_SECRET_TOKEN, algorithms=[ALGORITHM])
         return decode_token
     except ExpiredSignatureError:
         return None
 
+
 def login_user_form(username: Annotated[str | None, Form()] = None,
-                    email: Annotated[str | None, Form()] = None,
+                    email: Annotated[EmailStr | None, Form()] = None,
                     password: str = Form()) -> UserLoginSchema:
     return UserLoginSchema(username=username, email=email, password=password)

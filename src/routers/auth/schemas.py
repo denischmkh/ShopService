@@ -57,3 +57,21 @@ class UserLoginSchema(BaseModel):
     username: str | None = None
     email: EmailStr | None = None
     password: str
+
+
+class AccessTokenScheme(BaseModel):
+    id: str
+    username: str
+    email: str
+    type: str = 'ACCESS'
+
+
+class RefreshTokenScheme(BaseModel):
+    id: str
+    type: str = 'REFRESH'
+
+
+class TokenScheme(BaseModel):
+    access_token: str
+    refresh_token: str = None
+    token_type: str = 'Bearer'

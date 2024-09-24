@@ -5,7 +5,7 @@ from starlette import status
 from starlette.responses import JSONResponse
 
 from routers.auth.service import get_current_user
-from routers.email.constants import VERIFY_ACCOUNT_URL, RESEND_CODE_URL
+from routers.email.constants import VERIFY_ACCOUNT_URL, SEND_OR_RESEND_CODE_URL
 from routers.email.service import verify_user, make_new_code
 from routers.email.utils import send_email
 from routers.auth.schemas import UserReadSchema
@@ -17,7 +17,8 @@ router = APIRouter(prefix='/email', tags=['Email routers'])
 async def verifying_user(verified_user: Annotated[UserReadSchema, Depends(verify_user)]):
     return verified_user
 
-@router.get(RESEND_CODE_URL, description='Resend verification code')
+
+@router.get(SEND_OR_RESEND_CODE_URL, description='Resend verification code')
 async def resend_verify_code(user_scheme: Annotated[UserReadSchema, Depends(get_current_user)],
                              background_task: BackgroundTasks):
     if user_scheme.verified_email:

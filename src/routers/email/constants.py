@@ -1,5 +1,5 @@
 VERIFY_ACCOUNT_URL = '/verify'
-RESEND_CODE_URL = '/send_code'
+SEND_OR_RESEND_CODE_URL = '/send_code'
 
 
 

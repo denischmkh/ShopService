@@ -68,7 +68,7 @@ class UserCRUD(BaseCRUD):
 
 
     @classmethod
-    async def read(cls, user_id: UUID | None = None, username: str | None = None, email: str | None = None) -> UserReadSchema | None:
+    async def read(cls, user_id: UUID | None = None, username: str | None = None, email: str | None = None) -> User | None:
         async with get_session() as session:
             if user_id or username or email:
                 stmt = _sql.select(cls.__db_model).where(
@@ -127,7 +127,7 @@ class UserCRUD(BaseCRUD):
             elif user_data.email:
                 stmt = _sql.select(cls.__db_model).where(cls.__db_model.email == user_data.email)
             else:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Missing username or login')
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Missing username or email')
             result = await session.execute(stmt)
             user: User = result.scalars().first()
             if not user:
