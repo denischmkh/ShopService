@@ -43,7 +43,7 @@ async def get_current_user(access_token: Annotated[HTTPAuthorizationCredentials,
     if not payload:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Token has been expired')
     if payload.get('type') != 'ACCESS':
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Incorrect token type')
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Incorrect token type, necessary access')
     expiration_time = payload.get("exp")
     if expiration_time is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Token does not have an expiration time')
@@ -53,14 +53,21 @@ async def get_current_user(access_token: Annotated[HTTPAuthorizationCredentials,
     return user_from_db
 
 
-async def get_current_verified_user(current_user: UserReadSchema = Depends(get_current_user)):
+async def get_current_verified_user(current_user: UserReadSchema = Depends(get_current_user)) -> UserReadSchema:
     if not current_user.verified_email:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='You are not verified your email')
+
+    return UserReadSchema.from_orm(current_user)
+
+
+async def is_admin_current_user(current_user: UserReadSchema = Depends(get_current_verified_user)) -> UserReadSchema:
+    if not current_user.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=r"You don't have permission")
     return current_user
 
 
-async def deleted_user(user_id: Annotated[UUID, Query()],
-                       current_user: Annotated[UserReadSchema, Depends(get_current_verified_user)]) -> UserReadSchema:
+async def delete_user(user_id: Annotated[UUID, Query()],
+                      current_user: Annotated[UserReadSchema, Depends(get_current_verified_user)]) -> UserReadSchema:
     if not current_user.admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='You are not admin')
     deleted_user: UserReadSchema = await UserCRUD.delete(user_id)
@@ -69,7 +76,7 @@ async def deleted_user(user_id: Annotated[UUID, Query()],
     return deleted_user
 
 
-async def verity_user_and_make_token(user_data: Annotated[UserLoginSchema, Depends(login_user_form)]) -> TokenScheme:
+async def verify_user_and_make_token(user_data: Annotated[UserLoginSchema, Depends(login_user_form)]) -> TokenScheme:
     if not user_data.email and not user_data.username:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Please, enter username or email')
     user: User | None = await UserCRUD.verify_user(user_data)
@@ -93,27 +100,22 @@ async def refresh_token(refresh_token: str = Query(...)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Incorrect token type')
     user: User = await UserCRUD.read(user_id=payload['id'])
     user_schema = UserReadSchema.from_orm(user)
-    new_access_token_scheme = AccessTokenScheme(id=str(user_schema.id), username=user_schema.username,
-                                                       email=user_schema.email)
+    new_access_token_scheme = AccessTokenScheme(id=str(user_schema.id),
+                                                username=user_schema.username,
+                                                email=user_schema.email)
     access_token = create_access_and_refresh_token(new_access_token_scheme,
                                                    expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     token_scheme = TokenScheme(access_token=access_token)
     return token_scheme
 
 
-async def banning_user(current_user: Annotated[UserReadSchema, Depends(get_current_verified_user)],
-                       user_id: UUID = Form(...)):
-    if not current_user.admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='You are not admin')
+async def banning_user(user_id: UUID = Form(...)):
     banned_user = await UserCRUD.ban_user(user_id=user_id)
     banned_user_schema = UserReadSchema.from_orm(banned_user)
     return banned_user_schema
 
 
-async def unbanning_user(current_user: Annotated[UserReadSchema, Depends(get_current_verified_user)],
-                         user_id: UUID = Form(...)):
-    if not current_user.admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='You are not admin')
+async def unbanning_user(user_id: UUID = Form(...)):
     unbanned_user = await UserCRUD.unban_user(user_id=user_id)
     unbanned_user_schema = UserReadSchema.from_orm(unbanned_user)
     return unbanned_user_schema

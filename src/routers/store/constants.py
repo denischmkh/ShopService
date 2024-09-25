@@ -1,7 +1,3 @@
-from enum import Enum
-
-
-class CategoryUrls(str, Enum):
-    get_all_categories = '/get_categories'
-    create_category = '/create'
-    delete_category = '/delete'
+GET_ALL_CATEGORIES_URL = '/get_categories'
+CREATE_CATEGORY_URL = '/create'
+DELETE_CATEGORY_URL = '/delete'

@@ -9,7 +9,7 @@ from starlette import status
 
 from routers.auth.schemas import UserCreateSchema, UserDatabaseSchema, UserReadSchema, UserLoginSchema
 from routers.email.schemas import CreateVerificationCode
-from routers.schemas import CategoryCreateSchema, CategoryReadSchema
+from routers.store.schemas import CategoryCreateSchema, CategoryReadSchema, ProductCreateSchema, ProductReadSchema
 from .db_connect import AsyncSessionLocal
 from .models import Base, User, Product, Category, Basket, VerificationCode
 from pydantic import BaseModel
@@ -263,3 +263,45 @@ class CategoryCRUD(BaseCRUD):
             delete_stmt = _sql.delete(cls.__db_model).where(cls.__db_model.id == category_id)
             await session.execute(delete_stmt)
             return category_schema
+
+
+class ProductCRUD(BaseCRUD):
+    __db_model = Product
+    @classmethod
+    async def create(cls, product_schema: ProductCreateSchema) -> ProductReadSchema:
+        async with get_session() as session:
+            try:
+                stmt = _sql.insert(Product).values(**product_schema.dict())
+                await session.execute(stmt)
+                product_price_with_discount = round((product_schema.price / 100) * (100 - product_schema.discount), 2) if product_schema.discount else None
+                created_product_schema = ProductReadSchema(**product_schema.dict(), price_with_discount=product_price_with_discount)
+                return created_product_schema
+            except:
+                await session.rollback()
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Something not wrong!')
+
+    @classmethod
+    async def read(cls, product_id: UUID) -> ProductReadSchema:
+        async with get_session() as session:
+            stmt = _sql.select(Product).where(Product.id == product_id)
+            request = await session.execute(stmt)
+            result = request.scalars().first()
+            if not result:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Product not found!')
+            product_schema = ProductReadSchema.from_orm(result)
+            product_schema.price_with_discount = None if not product_schema.discount else round((product_schema.price / 100) * (100 - product_schema.discount), 2)
+            return product_schema
+
+    @classmethod
+    async def delete(cls, product_id: UUID) -> ProductReadSchema:
+        async with get_session() as session:
+            stmt_get = _sql.select(Product).where(Product.id == product_id)
+            request = await session.execute(stmt_get)
+            result = request.scalars().first()
+            if not result:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Product not found!')
+            stmt_delete = _sql.delete(Product).where(Product.id == product_id)
+            await session.execute(stmt_delete)
+            product_schema = ProductReadSchema.from_orm(result)
+            product_schema.price_with_discount = None if not product_schema.discount else round((product_schema.price / 100) * (100 - product_schema.discount), 2)
+            return product_schema

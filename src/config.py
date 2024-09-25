@@ -19,3 +19,9 @@ ADMIN_SECRET = os.getenv('ADMIN_SECRET')
 
 EMAIL_ADRESS = os.getenv('EMAIL_ADRESS')
 EMAIL_PASS = os.getenv('EMAIL_PASS')
+
+
+S3_ACCESS_KEY = os.getenv('S3_ACCESS_KEY')
+S3_SECRET_KEY = os.getenv('S3_SECRET_KEY')
+S3_ENDPOINT_URL = os.getenv('S3_ENDPOINT_URL')
+S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')

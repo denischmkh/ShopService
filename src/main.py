@@ -36,7 +36,8 @@ for router in routers:
 
 @app.exception_handler(RequestValidationError)
 async def exception_handler(request: Request, exc: RequestValidationError):
-    response = PlainTextResponse(content=f'Source not found! Please check parameters: {exc.args} {exc.body}', status_code=status.HTTP_404_NOT_FOUND)
+    response = PlainTextResponse(content=f'Source not found! Please check parameters: {exc.args} {exc.body}',
+                                 status_code=status.HTTP_404_NOT_FOUND)
     return response
 
 @app.exception_handler(HTTPException)

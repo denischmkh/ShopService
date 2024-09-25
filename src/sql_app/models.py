@@ -56,7 +56,7 @@ class Basket(Base):
     """ Basket Table """
     __tablename__ = 'baskets'
     id = Column(UUID(as_uuid=True), primary_key=True, unique=True, nullable=False)
-    products_id = Column(UUID(as_uuid=True))  # ID from "store" table
+    products_id = Column(UUID(as_uuid=True), index=True)  # ID from "store" table
     users_id = Column(UUID(as_uuid=True), index=True)  # ID from "users" table
     quantity = Column(Integer(), nullable=False)  # Product quantity in user basket
 
