@@ -50,11 +50,3 @@ async def get_s3_storage():
                          endpoint_url=S3_ENDPOINT_URL,
                          bucket_name=S3_BUCKET_NAME)
     yield s3_client
-
-async def main(image_name: str):
-    s3_client = S3Client(access_key='W77TIK2WQC780GH1BSXU',
-                         secret_key='NaSjxnG17Pmp8MOzCehNBUbs3puDqGpYcsSw5FLq',
-                         endpoint_url='https://gmhost.space',
-                         bucket_name='shop-bucket')
-    await s3_client.upload_file(image_name)
-    return f'{s3_client.config["endpoint_url"]}/{s3_client.bucket_name}/{image_name}'

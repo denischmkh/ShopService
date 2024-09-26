@@ -5,21 +5,27 @@ from uuid import UUID
 from starlette import status
 
 from routers.auth.service import get_current_user, get_current_verified_user, is_admin_current_user
+from .constants import PAGINATOR_PRODUCTS_PER_PAGE
 from .schemas import CategoryReadSchema, CategoryCreateSchema, ProductCreateSchema, ProductReadSchema
 from sql_app.crud import CategoryCRUD, ProductCRUD
 from sql_app.models import Category, User
-from fastapi import Form, Depends, HTTPException, UploadFile, File
+from fastapi import Form, Depends, HTTPException, UploadFile, File, Query
 
 from ..S3_Storage.storage import S3Client, get_s3_storage
 from ..auth.schemas import UserReadSchema
 
 
 class CategoryLogic:
+
+    @staticmethod
+    async def get_category(category_id: Annotated[UUID, Query(...)]):
+        category = await CategoryCRUD.read(category_id)
+        return category
+
     @staticmethod
     async def get_all_categories() -> list[CategoryReadSchema]:
-        categories = await CategoryCRUD.read()
-        categories_schemas = [CategoryReadSchema.from_orm(category) for category in categories]
-        return categories_schemas
+        categories = await CategoryCRUD.get_all_categories()
+        return categories
 
     @staticmethod
     def create_category_form(title: str = Form(..., min_length=2, max_length=30)):
@@ -33,7 +39,7 @@ class CategoryLogic:
         return result
 
     @staticmethod
-    async def delete_category(category_id: UUID):
+    async def delete_category(category_id: Annotated[UUID, Query(...)]):
         result = await CategoryCRUD.delete(category_id)
         return result
 
@@ -60,3 +66,17 @@ class ProductLogic:
                                                     categories_id=category_id)
         new_product: ProductReadSchema = await ProductCRUD.create(product_create_schema)
         return new_product
+
+    @staticmethod
+    async def get_product(
+            product_id: Annotated[UUID, Query(...)]
+    ) -> ProductReadSchema:
+        product = await ProductCRUD.read(product_id)
+        return product
+
+    @staticmethod
+    async def get_products(
+            page: Annotated[int, Query(..., ge=1)] = 1
+    ) -> list[ProductReadSchema]:
+        products = await ProductCRUD.get_all_products(page=page, per_page=PAGINATOR_PRODUCTS_PER_PAGE)
+        return products

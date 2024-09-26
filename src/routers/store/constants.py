@@ -1,3 +1,14 @@
-GET_ALL_CATEGORIES_URL = '/get_categories'
+GET_ALL_CATEGORIES_URL = '/all'
+GET_CATEGORY = '/read'
 CREATE_CATEGORY_URL = '/create'
 DELETE_CATEGORY_URL = '/delete'
+
+
+CREATE_PRODUCT = '/create'
+GET_PRODUCT = '/read'
+GET_ALL_PRODUCTS = '/all'
+DELETE_PRODUCT = '/delete'
+
+
+PAGINATOR_PRODUCTS_PER_PAGE = 10
+

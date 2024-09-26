@@ -5,8 +5,7 @@ from fastapi import HTTPException, Depends, Form, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette import status
 
-from .constants import REFRESH_TOKEN_EXPIRE_MINUTES, ACCESS_TOKEN_EXPIRE_MINUTES
-from .paginator import Paginator
+from .constants import REFRESH_TOKEN_EXPIRE_MINUTES, ACCESS_TOKEN_EXPIRE_MINUTES, PAGINATOR_ITEMS_PER_PAGE
 from .utils import decode_token, create_user_form, login_user_form, \
     create_access_and_refresh_token
 from .schemas import UserCreateSchema, UserReadSchema, UserDatabaseSchema, UserLoginSchema, AccessTokenScheme, \
@@ -33,9 +32,8 @@ async def get_user_by_id_or_username(user_id: Annotated[UUID, Query()] = None,
 
 
 async def get_all_users_from_db(page: Annotated[int, Query(..., ge=1)] = 1) -> list[UserReadSchema]:
-    users = await UserCRUD.get_all_users()
-    paginator = Paginator(users, page=page)
-    return paginator.paginated_items
+    users = await UserCRUD.get_all_users(page=page, per_page=PAGINATOR_ITEMS_PER_PAGE)
+    return users
 
 
 async def get_current_user(access_token: Annotated[HTTPAuthorizationCredentials, Depends(bearer)]):

@@ -10,6 +10,7 @@ from starlette import status
 from routers.auth.schemas import UserCreateSchema, UserDatabaseSchema, UserReadSchema, UserLoginSchema
 from routers.email.schemas import CreateVerificationCode
 from routers.store.schemas import CategoryCreateSchema, CategoryReadSchema, ProductCreateSchema, ProductReadSchema
+from routers.store.utils import make_products_read_schema
 from .db_connect import AsyncSessionLocal
 from .models import Base, User, Product, Category, Basket, VerificationCode
 from pydantic import BaseModel
@@ -65,14 +66,14 @@ class UserCRUD(BaseCRUD):
     """ Controlling interaction with User """
     __db_model = User
 
-
-
     @classmethod
-    async def read(cls, user_id: UUID | None = None, username: str | None = None, email: str | None = None) -> User | None:
+    async def read(cls, user_id: UUID | None = None, username: str | None = None,
+                   email: str | None = None) -> User | None:
         async with get_session() as session:
             if user_id or username or email:
                 stmt = _sql.select(cls.__db_model).where(
-                    _sql.or_(cls.__db_model.username == username, cls.__db_model.id == user_id, cls.__db_model.email == email))
+                    _sql.or_(cls.__db_model.username == username, cls.__db_model.id == user_id,
+                             cls.__db_model.email == email))
             else:
                 return None
             result = await session.execute(stmt)
@@ -112,11 +113,12 @@ class UserCRUD(BaseCRUD):
             return user
 
     @classmethod
-    async def get_all_users(cls):
+    async def get_all_users(cls, page: int = 1, per_page: int = 10) -> list[UserReadSchema]:
         async with get_session() as session:
-            stmt = _sql.select(cls.__db_model)
+            stmt = _sql.select(cls.__db_model).offset((page - 1) * per_page).limit(per_page)
             result = await session.execute(stmt)
-            users = result.scalars().all()
+            users_models = result.scalars().all()
+            users = [UserReadSchema.from_orm(user) for user in users_models]
             return users
 
     @classmethod
@@ -174,6 +176,7 @@ class UserCRUD(BaseCRUD):
             result = await session.execute(stmt)
             user: User = result.scalars().first()
             return user
+
     @classmethod
     async def verifying_user(cls, user_id: UUID) -> User:
         async with get_session() as session:
@@ -186,6 +189,7 @@ class UserCRUD(BaseCRUD):
             result = await session.execute(stmt)
             user = result.scalars().first()
             return user
+
 
 class VerifyCodeCRUD(BaseCRUD):
     """ Verification Codes """
@@ -210,6 +214,7 @@ class VerifyCodeCRUD(BaseCRUD):
                     stmt = _sql.insert(cls.__db_model).values(**code_schema.dict())
                     await session.execute(stmt)
             return code_schema
+
     @classmethod
     async def read(cls, user_schema: UserReadSchema) -> int:
         async with get_session() as session:
@@ -217,7 +222,8 @@ class VerifyCodeCRUD(BaseCRUD):
             result = await session.execute(stmt)
             verify_code: VerificationCode = result.scalars().first()
             if not verify_code or datetime.datetime.utcnow() > verify_code.expire_to:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Code invalid or expired, please request a new code')
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                    detail='Code invalid or expired, please request a new code')
             return int(verify_code.verify_code)
 
     @classmethod
@@ -245,12 +251,14 @@ class CategoryCRUD(BaseCRUD):
             return category_create_schema
 
     @classmethod
-    async def read(cls) -> Iterable:
+    async def read(cls, category_id: UUID) -> CategoryReadSchema:
         async with get_session() as session:
-            stmt = _sql.select(cls.__db_model)
+            stmt = _sql.select(cls.__db_model).where(cls.__db_model.id == category_id)
             result = await session.execute(stmt)
-            categories = result.scalars().all()
-            return categories
+            category = result.scalars().first()
+            if not category:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Category not found!')
+            return CategoryReadSchema.from_orm(category)
 
     @classmethod
     async def delete(cls, category_id: UUID) -> CategoryReadSchema | None:
@@ -264,17 +272,29 @@ class CategoryCRUD(BaseCRUD):
             await session.execute(delete_stmt)
             return category_schema
 
+    @classmethod
+    async def get_all_categories(cls) -> list[CategoryReadSchema]:
+        async with get_session() as session:
+            stmt = _sql.select(cls.__db_model)
+            result = await session.execute(stmt)
+            categories = result.scalars().all()
+            parsed_categories = [CategoryReadSchema.from_orm(category) for category in categories]
+            return parsed_categories
+
 
 class ProductCRUD(BaseCRUD):
     __db_model = Product
+
     @classmethod
     async def create(cls, product_schema: ProductCreateSchema) -> ProductReadSchema:
         async with get_session() as session:
             try:
                 stmt = _sql.insert(Product).values(**product_schema.dict())
                 await session.execute(stmt)
-                product_price_with_discount = round((product_schema.price / 100) * (100 - product_schema.discount), 2) if product_schema.discount else None
-                created_product_schema = ProductReadSchema(**product_schema.dict(), price_with_discount=product_price_with_discount)
+                product_price_with_discount = round((product_schema.price / 100) * (100 - product_schema.discount),
+                                                    2) if product_schema.discount else None
+                created_product_schema = ProductReadSchema(**product_schema.dict(),
+                                                           price_with_discount=product_price_with_discount)
                 return created_product_schema
             except:
                 await session.rollback()
@@ -288,8 +308,7 @@ class ProductCRUD(BaseCRUD):
             result = request.scalars().first()
             if not result:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Product not found!')
-            product_schema = ProductReadSchema.from_orm(result)
-            product_schema.price_with_discount = None if not product_schema.discount else round((product_schema.price / 100) * (100 - product_schema.discount), 2)
+            product_schema = make_products_read_schema(result)
             return product_schema
 
     @classmethod
@@ -302,6 +321,13 @@ class ProductCRUD(BaseCRUD):
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Product not found!')
             stmt_delete = _sql.delete(Product).where(Product.id == product_id)
             await session.execute(stmt_delete)
-            product_schema = ProductReadSchema.from_orm(result)
-            product_schema.price_with_discount = None if not product_schema.discount else round((product_schema.price / 100) * (100 - product_schema.discount), 2)
+            product_schema = make_products_read_schema(result)
             return product_schema
+
+    @classmethod
+    async def get_all_products(cls, page: int = 1, per_page: int = 10) -> list[ProductReadSchema]:
+        async with get_session() as session:
+            stmt = _sql.select(cls.__db_model).offset((page - 1) * per_page).limit(per_page)
+            result = await session.execute(stmt)
+            products = result.scalars().all()
+            return [make_products_read_schema(product) for product in products]
