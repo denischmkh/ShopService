@@ -15,8 +15,9 @@
   <component name="PyNamespacePackagesService">
     <option name="namespacePackageFolders">
       <list>
-        <option value="$MODULE_DIR$/src/routers" />
-        <option value="$MODULE_DIR$/src/sql_app" />
+        <option value="$MODULE_DIR$/src/services" />
+        <option value="$MODULE_DIR$/src/sql" />
+        <option value="$MODULE_DIR$/src/mongo" />
       </list>
     </option>
   </component>

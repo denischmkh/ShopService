@@ -11,7 +11,7 @@ from alembic import context
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from sql_app.db_connect import DATABASE_URL
+from sql.connect import DATABASE_URL
 
 
 # this is the Alembic Config object, which provides
@@ -30,7 +30,7 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 
-from sql_app.models import Base
+from sql.models import Base
 
 target_metadata = Base.metadata
 

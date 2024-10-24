@@ -1,0 +1,5 @@
+ADD_ITEM_TO_BASKET = '/add'
+DELETE_ITEM_FROM_BASKET = '/delete'
+GET_FULL_BASKET = '/get'
+CLEAR_BASKET = '/clear'
+UPDATE_QUANTITY = '/update'
