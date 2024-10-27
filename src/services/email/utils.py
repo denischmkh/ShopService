@@ -12,12 +12,10 @@ def verify_code_expire() -> datetime:
     expire_to = datetime.utcnow() + timedelta(days=VERIFY_CODE_EXPIRE_DAYS)
     return expire_to
 
+
 def create_verify_code():
     code = random.randint(100000, 999999)
     return code
-
-
-
 
 
 def send_email(body, to_email):
@@ -83,7 +81,6 @@ def send_email(body, to_email):
     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
         smtp.login(from_email, config.EMAIL_PASS)
         smtp.send_message(msg)
-
 
 
 # Example usage
