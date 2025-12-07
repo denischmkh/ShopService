@@ -1,1 +1,1 @@
-# BreakingVladApi
+Shop API service
